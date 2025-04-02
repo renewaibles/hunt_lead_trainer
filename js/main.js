@@ -248,7 +248,7 @@ function init() {
   gridHelper.position.y = 0;
   scene.add(gridHelper);
 
-  renderer.domElement.addEventListener('click', function(e) {
+  renderer.domElement.addEventListener('mousedown', function(e) {
     if (document.pointerLockElement !== renderer.domElement) {
       renderer.domElement.requestPointerLock();
       return;
