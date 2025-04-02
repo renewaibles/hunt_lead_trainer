@@ -249,11 +249,13 @@ function init() {
   scene.add(gridHelper);
 
   renderer.domElement.addEventListener('mousedown', function(e) {
-    if (document.pointerLockElement !== renderer.domElement) {
-      renderer.domElement.requestPointerLock();
-      return;
+    if (e.button === 0) { // Check for left mouse button
+      if (document.pointerLockElement !== renderer.domElement) {
+        renderer.domElement.requestPointerLock();
+        return;
+      }
+      shootBullet();
     }
-    shootBullet();
   }, false);
 
   document.addEventListener('contextmenu', e => e.preventDefault());
