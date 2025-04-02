@@ -72,6 +72,8 @@ const hardModeInput = document.getElementById("hardModeInput");
 const strafeIntensityInput = document.getElementById("strafeIntensityInput");
 const strafeFrequencyInput = document.getElementById("strafeFrequencyInput");
 const scopeTypeSelect = document.getElementById("scopeTypeSelect");
+// NEW: Iron Sights Model select input (make sure this exists in your HTML)
+const ironSightsModelSelect = document.getElementById("ironSightsModelSelect");
 const ironSightsPreviewImg = document.getElementById("ironSightsPreviewImg");
 const ironSightsScaleInput = document.getElementById("ironSightsScaleInput");
 const saveSettingsButton = document.getElementById("saveSettings");
@@ -93,6 +95,7 @@ function updatePauseMenuInputs() {
   strafeFrequencyInput.value = settings.strafeFrequency;
   scopeTypeSelect.value = settings.scopeType;
   ironSightsScaleInput.value = settings.ironSightsScale;
+  ironSightsModelSelect.value = settings.ironSightsModel;  // Set the select input to the saved model
 
   // Update preview for iron sights/aperture scopes
   if (settings.scopeType === "ironSights" || settings.scopeType === "aperture") {
@@ -107,6 +110,12 @@ function updatePauseMenuInputs() {
 // Listen for scope type changes
 scopeTypeSelect.addEventListener("change", function() {
   settings.scopeType = this.value;
+  updatePauseMenuInputs();
+});
+
+// Listen for iron sights model changes
+ironSightsModelSelect.addEventListener("change", function() {
+  settings.ironSightsModel = this.value;
   updatePauseMenuInputs();
 });
 
@@ -125,6 +134,7 @@ saveSettingsButton.addEventListener("click", function() {
   settings.strafeFrequency = parseFloat(strafeFrequencyInput.value);
   settings.scopeType = scopeTypeSelect.value;
   settings.ironSightsScale = parseFloat(ironSightsScaleInput.value);
+  settings.ironSightsModel = ironSightsModelSelect.value;  // Save the chosen iron sights model
   saveSettings();
 
   if (yawObject) {
