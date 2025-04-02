@@ -1,0 +1,131 @@
+body { 
+  margin: 0; 
+  overflow: hidden; 
+  background: #111; 
+}
+#score {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  color: white;
+  font-size: 24px;
+  z-index: 1;
+}
+/* Info text */
+#info {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  color: white;
+  font-size: 16px;
+  z-index: 1;
+}
+/* Crosshair styling */
+#crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin-left: -10px;
+  margin-top: -10px;
+  pointer-events: none;
+  z-index: 2;
+}
+#crosshair:before, #crosshair:after {
+  content: '';
+  position: absolute;
+  background: #ff0000;
+}
+#crosshair:before {
+  left: 50%;
+  top: 0;
+  width: 1px;
+  height: 100%;
+  margin-left: -1px;
+}
+#crosshair:after {
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  margin-top: -1px;
+}
+/* Iron Sights Overlay */
+#ironSights {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, 0); /* Top of the PNG aligns with the screen center */
+  pointer-events: none;
+  z-index: 4;
+  display: none;
+}
+#ironSights img {
+  width: 100px; /* Base width; scaling is applied via JS */
+  height: auto;
+  opacity: 1;
+  transform-origin: top center; /* Keep the top aligned when scaling */
+}
+/* Hit Marker Styling */
+#hitMarker {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 3;
+  display: none;
+}
+#hitMarker .line {
+  position: absolute;
+  background: white;
+  width: 1px;
+  height: 20px;
+  top: 0;
+  left: 50%;
+  transform-origin: center;
+}
+#hitMarker .line:first-child {
+  transform: translateX(-50%) rotate(45deg);
+}
+#hitMarker .line:last-child {
+  transform: translateX(-50%) rotate(-45deg);
+}
+/* Pause Menu Styles */
+#pauseMenu {
+  display: none;
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; 
+  height: 100%;
+  background: rgba(0,0,0,0.8);
+  color: white;
+  z-index: 5;
+  font-family: sans-serif;
+  padding: 20px;
+}
+#pauseMenu h1 { 
+  margin-top: 0; 
+}
+#pauseMenu label { 
+  display: block; 
+  margin: 10px 0; 
+}
+/* Iron Sights Preview in Settings */
+#ironSightsPreview {
+  width: 120px;        /* fixed width */
+  height: 120px;       /* fixed height */
+  overflow: hidden;    /* clips the scaled image */
+  position: relative;
+  margin-bottom: 10px;
+}
+#ironSightsPreview img {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(1);
+  pointer-events: none;
+}
