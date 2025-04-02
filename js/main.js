@@ -28,8 +28,17 @@ let settings = {
   strafeFrequency: 10.0,
   ironSightsModel: "model1",
   ironSightsScale: 0.5,
-  scopeType: "ironSights"
+  scopeType: "ironSights",
+  shotCycleTime: 0.5
 };
+
+let lastShotTime = 0;  // Global variable to track last shot time
+
+// --- WASD Movement Global Flags ---
+let moveForward = false,
+    moveBackward = false,
+    moveLeft = false,
+    moveRight = false;
 
 const TARGET_ACCELERATION = 5;
 const TARGET_STEER_ACCEL = 5;
@@ -104,6 +113,7 @@ function updatePauseMenuInputs() {
   scopeTypeSelect.value = settings.scopeType;
   ironSightsScaleInput.value = settings.ironSightsScale;
   ironSightsModelSelect.value = settings.ironSightsModel;
+  document.getElementById("shotCycleTimeInput").value = settings.shotCycleTime;
 
   if (settings.scopeType === "ironSights" || settings.scopeType === "aperture") {
     document.getElementById("ironSightsPreview").style.display = "block";
@@ -138,6 +148,7 @@ saveSettingsButton.addEventListener("click", function() {
   settings.scopeType = scopeTypeSelect.value;
   settings.ironSightsScale = parseFloat(ironSightsScaleInput.value);
   settings.ironSightsModel = ironSightsModelSelect.value;
+  settings.shotCycleTime = parseFloat(document.getElementById("shotCycleTimeInput").value);
   saveSettings();
 
   if (yawObject) {
@@ -149,14 +160,31 @@ saveSettingsButton.addEventListener("click", function() {
 resumeGameButton.addEventListener("click", togglePause);
 
 document.addEventListener('keydown', function(e) {
+  // Existing keys (Escape, Space, Control) remain unchanged
   if (e.key === "Escape") { togglePause(); }
   if (e.code === "Space") { moveUp = true; }
   if (e.key === "Control") { moveDown = true; }
+
+  // --- NEW: WASD Controls ---
+  let key = e.key.toLowerCase();
+  if(key === 'w') { moveForward = true; }
+  if(key === 's') { moveBackward = true; }
+  if(key === 'a') { moveLeft = true; }
+  if(key === 'd') { moveRight = true; }
 });
+
 document.addEventListener('keyup', function(e) {
   if (e.code === "Space") { moveUp = false; }
   if (e.key === "Control") { moveDown = false; }
+
+  let key = e.key.toLowerCase();
+  if(key === 'w') { moveForward = false; }
+  if(key === 's') { moveBackward = false; }
+  if(key === 'a') { moveLeft = false; }
+  if(key === 'd') { moveRight = false; }
 });
+
+
 
 function togglePause() {
   paused = !paused;
@@ -326,6 +354,20 @@ function maintainTargets() {
 
 // --- Shooting and Collision Detection ---
 function shootBullet() {
+  let now = performance.now();
+  if (now - lastShotTime < settings.shotCycleTime * 1000) {
+    return; // Still in "reload" cycle; do not shoot
+  }
+  lastShotTime = now;
+
+  // For iron sights or aperture, make the image partially transparent during reload
+  if (settings.scopeType === "ironSights" || settings.scopeType === "aperture") {
+    ironSightsImg.style.opacity = "0.8";
+    setTimeout(() => {
+      ironSightsImg.style.opacity = "1";
+    }, settings.shotCycleTime * 1000);
+  }
+
   const bulletGeometry = new THREE.SphereGeometry(0.05, 8, 8);
   const bulletMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
   const bullet = new THREE.Mesh(bulletGeometry, bulletMaterial);
@@ -343,6 +385,7 @@ function shootBullet() {
   shotsFired++;
   updateAccuracyDisplay();
 }
+
 function lineSphereIntersection(p0, p1, center, radius) {
   let d = p1.clone().sub(p0);
   let f = p0.clone().sub(center);
@@ -465,6 +508,31 @@ function animate() {
   if (moveDown) {
     yawObject.position.y -= 5 * dt;
     settings.playerHeight = yawObject.position.y;
+  }
+
+  // Calculate forward direction (ignore vertical component)
+  let forward = new THREE.Vector3();
+  camera.getWorldDirection(forward);
+  forward.y = 0;
+  forward.normalize();
+
+  // Calculate right direction from forward vector
+  let right = new THREE.Vector3();
+  right.crossVectors(forward, new THREE.Vector3(0,1,0));
+  right.normalize();
+
+  // Move with WASD: WS at 5 m/s, AD at 2.5 m/s
+  if (moveForward) {
+      yawObject.position.add(forward.clone().multiplyScalar(5 * dt));
+  }
+  if (moveBackward) {
+      yawObject.position.add(forward.clone().multiplyScalar(-5 * dt));
+  }
+  if (moveLeft) {
+      yawObject.position.add(right.clone().multiplyScalar(-2.5 * dt));
+  }
+  if (moveRight) {
+      yawObject.position.add(right.clone().multiplyScalar(2.5 * dt));
   }
 
   if (paused) {
