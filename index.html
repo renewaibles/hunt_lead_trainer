@@ -63,9 +63,10 @@
       display: none;
     }
     #ironSights img {
-      width: 100px; /* Adjust size as needed */
+      width: 100px;
       height: auto;
       opacity: 1;
+      transform-origin: top center;
     }
     /* Hit Marker Styling */
     #hitMarker {
@@ -298,7 +299,6 @@
       ironSightsSelect.value = settings.ironSightsModel;
       // Update the preview
       ironSightsPreviewImg.src = ironSightsModelMap[settings.ironSightsModel];
-      ironSightsPreviewImg.style.transform = "translate(-50%, -50%) scale(" + settings.ironSightsScale + ")";
     }
 
     // Listen for iron sights model selection changes to update preview
@@ -328,7 +328,8 @@
       if(yawObject) {
         yawObject.position.y = settings.playerHeight;
       }
-      ironSightsImg.style.transform = "scale(" + settings.ironSightsScale + ")";
+      ironSightsImg.style.transform = "translate(-50%, 0) scale(" + settings.ironSightsScale + ")";
+
     });
 
     resumeGameButton.addEventListener("click", togglePause);
