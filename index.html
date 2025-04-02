@@ -57,16 +57,16 @@
       position: absolute;
       top: 50%;
       left: 50%;
-      transform: translate(-50%, 0); /* Top of the PNG aligns with the screen center */
+      transform: translate(-50%, 0); /* top of the PNG aligns with screen center */
       pointer-events: none;
       z-index: 4;
       display: none;
     }
     #ironSights img {
-      width: 100px;
+      width: 100px; /* base width; scaling applied via JS */
       height: auto;
       opacity: 1;
-      transform-origin: top center;
+      transform-origin: top center; /* anchor top edge for scaling */
     }
     /* Hit Marker Styling */
     #hitMarker {
@@ -109,18 +109,19 @@
     }
     #pauseMenu h1 { margin-top: 0; }
     #pauseMenu label { display: block; margin: 10px 0; }
-    /* Iron Sights Preview in Settings */
+    /* Scope Preview in Settings */
     #ironSightsPreview {
-      width: 120px;        /* fixed width */
-      height: 120px;       /* fixed height */
-      overflow: hidden;    /* clips the scaled image if it grows too large */
+      width: 120px;        /* fixed size */
+      height: 120px;
+      overflow: hidden;
       position: relative;
+      margin-bottom: 10px;
     }
     #ironSightsPreview img {
       position: absolute;
       left: 50%;
       top: 50%;
-      transform: translate(-50%, -50%) scale(1); /* the scale value will be updated via JS */
+      transform: translate(-50%, -50%) scale(1);
       pointer-events: none;
     }
   </style>
@@ -139,6 +140,7 @@
   <!-- Pause Menu Overlay -->
   <div id="pauseMenu">
     <h1>Pause Menu</h1>
+    <!-- (Other settings remain unchanged) -->
     <label>
       Sensitivity:
       <input id="sensitivityInput" type="number" step="0.0001">
@@ -171,10 +173,7 @@
       Player Height:
       <input id="playerHeightInput" type="number" step="0.1">
     </label>
-    <label>
-      Zoom Factor:
-      <input id="zoomInput" type="number" step="0.1">
-    </label>
+    <!-- Remove free zoom factor input -->
     <label>
       Show Distance:
       <input id="showDistanceInput" type="checkbox">
@@ -191,21 +190,26 @@
       Strafe Frequency:
       <input id="strafeFrequencyInput" type="number" step="0.1">
     </label>
+    <!-- Scope Type Selection -->
     <label>
-      Iron Sights Model:
-      <select id="ironSightsSelect">
-        <option value="model1">Model 1</option>
-        <option value="model2">Model 2</option>
-        <option value="model3">Model 3</option>
+      Scope Type:
+      <select id="scopeTypeSelect">
+        <option value="ironSights">Iron Sights</option>
+        <option value="deadeye">Deadeye</option>
+        <option value="marksman">Marksman</option>
+        <option value="sniper">Sniper</option>
+        <option value="aperture">Aperture</option>
       </select>
     </label>
+    <!-- Iron Sights Preview (only used if scope type is Iron Sights or Aperture) -->
+    <div id="ironSightsPreview">
+      <img id="ironSightsPreviewImg" src="model1.png" alt="Iron Sights Preview">
+    </div>
+    <!-- Iron Sights Scale -->
     <label>
       Iron Sights Scale:
       <input id="ironSightsScaleInput" type="number" step="0.1" value="1.0">
     </label>
-    <div id="ironSightsPreview">
-      <img id="ironSightsPreviewImg" src="model1.png" alt="Iron Sights Preview">
-    </div>
     <button id="saveSettings">Save</button>
     <button id="resumeGame">Resume</button>
   </div>
@@ -219,6 +223,15 @@
       model3: "model3.png"
     };
 
+    // --- Mapping for Scope Zoom Factors ---
+    const scopeZoomFactors = {
+      ironSights: 2.04,
+      deadeye: 5,
+      marksman: 8.46,
+      sniper: 11,
+      aperture: 6.25
+    };
+
     // --- Settings and Persistence ---
     let settings = {
       sensitivity: 0.001,
@@ -229,13 +242,15 @@
       targetAcceleration: 5,
       targetSteerAccel: 5,
       playerHeight: 10,
-      zoom: 2.04,
       showDistance: true,
       hardMode: false,
       strafeIntensity: 15.0,
-      strafeFrequency: 10.0,
+      strafeFrequency: 15.0,
+      // Use the selected model for iron sights/aperture
       ironSightsModel: "model1",
-      ironSightsScale: 1.0
+      ironSightsScale: 1.0,
+      // New scope type selection:
+      scopeType: "ironSights"
     };
     function loadSettings() {
       let stored = localStorage.getItem('shooterConfig');
@@ -269,18 +284,17 @@
     const targetAccelerationInput = document.getElementById("targetAccelerationInput");
     const targetSteerAccelInput = document.getElementById("targetSteerAccelInput");
     const playerHeightInput = document.getElementById("playerHeightInput");
-    const zoomInput = document.getElementById("zoomInput");
     const showDistanceInput = document.getElementById("showDistanceInput");
     const hardModeInput = document.getElementById("hardModeInput");
     const strafeIntensityInput = document.getElementById("strafeIntensityInput");
     const strafeFrequencyInput = document.getElementById("strafeFrequencyInput");
-    const ironSightsSelect = document.getElementById("ironSightsSelect");
+    const scopeTypeSelect = document.getElementById("scopeTypeSelect");
     const ironSightsPreviewImg = document.getElementById("ironSightsPreviewImg");
+    const ironSightsScaleInput = document.getElementById("ironSightsScaleInput");
     const saveSettingsButton = document.getElementById("saveSettings");
     const resumeGameButton = document.getElementById("resumeGame");
     const hitMarker = document.getElementById("hitMarker");
     const ironSightsImg = document.getElementById("ironSightsImg");
-    const ironSightsScaleInput = document.getElementById("ironSightsScaleInput");
 
     function updatePauseMenuInputs() {
       sensitivityInput.value = settings.sensitivity;
@@ -291,22 +305,32 @@
       targetAccelerationInput.value = settings.targetAcceleration;
       targetSteerAccelInput.value = settings.targetSteerAccel;
       playerHeightInput.value = settings.playerHeight;
-      zoomInput.value = settings.zoom;
       showDistanceInput.checked = settings.showDistance;
       hardModeInput.checked = settings.hardMode;
       strafeIntensityInput.value = settings.strafeIntensity;
       strafeFrequencyInput.value = settings.strafeFrequency;
-      ironSightsSelect.value = settings.ironSightsModel;
-      // Update the preview
-      ironSightsPreviewImg.src = ironSightsModelMap[settings.ironSightsModel];
+      scopeTypeSelect.value = settings.scopeType;
+      ironSightsScaleInput.value = settings.ironSightsScale;
+      // Update the preview only if using iron sights or aperture
+      if(settings.scopeType === "ironSights" || settings.scopeType === "aperture"){
+        document.getElementById("ironSightsPreview").style.display = "block";
+        ironSightsPreviewImg.src = ironSightsModelMap[settings.ironSightsModel];
+        ironSightsPreviewImg.style.transform = "translate(-50%, -50%) scale(" + settings.ironSightsScale + ")";
+      } else {
+        document.getElementById("ironSightsPreview").style.display = "none";
+      }
     }
 
-    // Listen for iron sights model selection changes to update preview
-    ironSightsSelect.addEventListener("change", function() {
-      settings.ironSightsModel = this.value;
-      ironSightsPreviewImg.src = ironSightsModelMap[this.value];
+    // Listen for scope type selection changes
+    scopeTypeSelect.addEventListener("change", function() {
+      settings.scopeType = this.value;
+      updatePauseMenuInputs();
     });
 
+    // Listen for iron sights model selection changes (if needed)
+    // (Assuming you keep a separate mechanism to choose model.png)
+    // For now we keep the same mapping as before.
+    
     saveSettingsButton.addEventListener("click", function() {
       settings.sensitivity = parseFloat(sensitivityInput.value);
       settings.maxDistance = parseFloat(maxDistanceInput.value);
@@ -316,20 +340,19 @@
       settings.targetAcceleration = parseFloat(targetAccelerationInput.value);
       settings.targetSteerAccel = parseFloat(targetSteerAccelInput.value);
       settings.playerHeight = parseFloat(playerHeightInput.value);
-      settings.zoom = parseFloat(zoomInput.value);
       settings.showDistance = showDistanceInput.checked;
       settings.hardMode = hardModeInput.checked;
       settings.strafeIntensity = parseFloat(strafeIntensityInput.value);
       settings.strafeFrequency = parseFloat(strafeFrequencyInput.value);
-      settings.ironSightsModel = ironSightsSelect.value;
+      settings.scopeType = scopeTypeSelect.value;
       settings.ironSightsScale = parseFloat(ironSightsScaleInput.value);
       saveSettings();
       // Update player's height immediately.
       if(yawObject) {
         yawObject.position.y = settings.playerHeight;
       }
+      // Update iron sights image scale
       ironSightsImg.style.transform = "translate(-50%, 0) scale(" + settings.ironSightsScale + ")";
-
     });
 
     resumeGameButton.addEventListener("click", togglePause);
@@ -530,13 +553,22 @@
     }
     function onMouseDown(event) {
       if (event.button === 2) {
-        camera.zoom = settings.zoom;
+        // Set zoom factor based on scope type
+        let zoomValue = scopeZoomFactors[settings.scopeType];
+        camera.zoom = zoomValue;
         camera.updateProjectionMatrix();
-        // Update the iron sights image to match the selected model
-        ironSightsImg.src = ironSightsModelMap[settings.ironSightsModel];
-        ironSightsImg.style.transform = "scale(" + settings.ironSightsScale + ")";
-        document.getElementById("ironSights").style.display = "block";
-        document.getElementById("crosshair").style.display = "none";
+        // For ironSights and aperture, show the model overlay; otherwise, show the crosshair.
+        if(settings.scopeType === "ironSights" || settings.scopeType === "aperture") {
+          // Update the iron sights image
+          ironSightsImg.src = ironSightsModelMap[settings.ironSightsModel];
+          ironSightsImg.style.transform = "translate(-50%, 0) scale(" + settings.ironSightsScale + ")";
+          document.getElementById("ironSights").style.display = "block";
+          document.getElementById("crosshair").style.display = "none";
+        } else {
+          // Use the default crosshair
+          document.getElementById("crosshair").style.display = "block";
+          document.getElementById("ironSights").style.display = "none";
+        }
       }
     }
     function onMouseUp(event) {
@@ -604,27 +636,11 @@
         v.add(randomAccel);
 
         if (settings.hardMode) {
-          let currentTime = performance.now() / 1000;
-          // Update the strafe direction at random intervals
-          if (!target.userData.nextStrafeTime || currentTime >= target.userData.nextStrafeTime) {
-            // Create a perpendicular vector to the current velocity
-            let perpendicular = new THREE.Vector3(-v.z, 0, v.x);
-            if (perpendicular.length() === 0) {
-              perpendicular.set(1, 0, 0);
-            }
-            perpendicular.normalize();
-            // Randomly flip direction
-            if (Math.random() < 0.5) {
-              perpendicular.negate();
-            }
-            target.userData.strafeDirection = perpendicular;
-            // Set the next update time (e.g., update every 0.5 to 1.5 seconds)
-            target.userData.nextStrafeTime = currentTime + (0.5 + Math.random());
-          }
-          // Apply random acceleration in the stored strafe direction
-          let randomFactor = 0.5 + Math.random(); // random factor between 0.5 and 1.5
-          let strafeAccel = target.userData.strafeDirection.clone()
-                             .multiplyScalar(settings.strafeIntensity * dt * randomFactor);
+          let perpendicular = new THREE.Vector3(-v.z, 0, v.x);
+          if (perpendicular.length() === 0) { perpendicular.set(1, 0, 0); }
+          perpendicular.normalize();
+          let timeSeconds = performance.now() / 1000;
+          let strafeAccel = perpendicular.multiplyScalar(Math.sin(timeSeconds * settings.strafeFrequency) * settings.strafeIntensity * dt);
           v.add(strafeAccel);
         }
 
