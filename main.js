@@ -131,7 +131,7 @@ saveSettingsButton.addEventListener("click", function() {
     yawObject.position.y = settings.playerHeight;
   }
   // Update iron sights overlay scale if used
-  ironSightsImg.style.transform = "translate(-50%, 0) scale(" + settings.ironSightsScale + ")";
+  ironSightsImg.style.transform = "scale(" + settings.ironSightsScale + ")";
 });
 
 resumeGameButton.addEventListener("click", togglePause);
