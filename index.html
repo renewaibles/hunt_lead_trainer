@@ -603,11 +603,27 @@
         v.add(randomAccel);
 
         if (settings.hardMode) {
-          let perpendicular = new THREE.Vector3(-v.z, 0, v.x);
-          if (perpendicular.length() === 0) { perpendicular.set(1, 0, 0); }
-          perpendicular.normalize();
-          let timeSeconds = performance.now() / 1000;
-          let strafeAccel = perpendicular.multiplyScalar(Math.sin(timeSeconds * settings.strafeFrequency) * settings.strafeIntensity * dt);
+          let currentTime = performance.now() / 1000;
+          // Update the strafe direction at random intervals
+          if (!target.userData.nextStrafeTime || currentTime >= target.userData.nextStrafeTime) {
+            // Create a perpendicular vector to the current velocity
+            let perpendicular = new THREE.Vector3(-v.z, 0, v.x);
+            if (perpendicular.length() === 0) {
+              perpendicular.set(1, 0, 0);
+            }
+            perpendicular.normalize();
+            // Randomly flip direction
+            if (Math.random() < 0.5) {
+              perpendicular.negate();
+            }
+            target.userData.strafeDirection = perpendicular;
+            // Set the next update time (e.g., update every 0.5 to 1.5 seconds)
+            target.userData.nextStrafeTime = currentTime + (0.5 + Math.random());
+          }
+          // Apply random acceleration in the stored strafe direction
+          let randomFactor = 0.5 + Math.random(); // random factor between 0.5 and 1.5
+          let strafeAccel = target.userData.strafeDirection.clone()
+                             .multiplyScalar(settings.strafeIntensity * dt * randomFactor);
           v.add(strafeAccel);
         }
 
