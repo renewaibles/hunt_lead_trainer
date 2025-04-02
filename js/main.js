@@ -15,7 +15,6 @@ const scopeZoomFactors = {
 };
 
 // --- Settings and Persistence ---
-// Removed targetAcceleration and targetSteerAccel from user settings
 let settings = {
   sensitivity: 0.001,
   maxDistance: 100,
@@ -32,7 +31,6 @@ let settings = {
   scopeType: "ironSights"
 };
 
-// Fixed constants for target movement behavior.
 const TARGET_ACCELERATION = 5;
 const TARGET_STEER_ACCEL = 5;
 
@@ -54,6 +52,16 @@ let score = 0;
 let lastTime = performance.now();
 let paused = false;
 
+// Accuracy tracking variables
+let shotsFired = 0;
+let headshotCount = 0;
+let bodyshotCount = 0;
+let missCount = 0;
+
+// For smooth player height movement
+let moveUp = false;
+let moveDown = false;
+
 // For pointer lock aiming
 const mouse = new THREE.Vector2(0, 0);
 let yaw = 0, pitch = 0;
@@ -65,14 +73,12 @@ const maxDistanceInput = document.getElementById("maxDistanceInput");
 const numTargetsInput = document.getElementById("numTargetsInput");
 const muzzleVelocityInput = document.getElementById("muzzleVelocityInput");
 const targetMaxSpeedInput = document.getElementById("targetMaxSpeedInput");
-// Removed targetAccelerationInput and targetSteerAccelInput
 const playerHeightInput = document.getElementById("playerHeightInput");
 const showDistanceInput = document.getElementById("showDistanceInput");
 const hardModeInput = document.getElementById("hardModeInput");
 const strafeIntensityInput = document.getElementById("strafeIntensityInput");
 const strafeFrequencyInput = document.getElementById("strafeFrequencyInput");
 const scopeTypeSelect = document.getElementById("scopeTypeSelect");
-// NEW: Iron Sights Model select input (make sure this exists in your HTML)
 const ironSightsModelSelect = document.getElementById("ironSightsModelSelect");
 const ironSightsPreviewImg = document.getElementById("ironSightsPreviewImg");
 const ironSightsScaleInput = document.getElementById("ironSightsScaleInput");
@@ -81,13 +87,15 @@ const resumeGameButton = document.getElementById("resumeGame");
 const hitMarker = document.getElementById("hitMarker");
 const ironSightsImg = document.getElementById("ironSightsImg");
 
+// Accuracy display element
+const accuracyDisplay = document.getElementById("accuracy");
+
 function updatePauseMenuInputs() {
   sensitivityInput.value = settings.sensitivity;
   maxDistanceInput.value = settings.maxDistance;
   numTargetsInput.value = settings.numTargets;
   muzzleVelocityInput.value = settings.muzzleVelocity;
   targetMaxSpeedInput.value = settings.targetMaxSpeed;
-  // Removed targetAcceleration and targetSteerAccel inputs
   playerHeightInput.value = settings.playerHeight;
   showDistanceInput.checked = settings.showDistance;
   hardModeInput.checked = settings.hardMode;
@@ -95,9 +103,8 @@ function updatePauseMenuInputs() {
   strafeFrequencyInput.value = settings.strafeFrequency;
   scopeTypeSelect.value = settings.scopeType;
   ironSightsScaleInput.value = settings.ironSightsScale;
-  ironSightsModelSelect.value = settings.ironSightsModel;  // Set the select input to the saved model
+  ironSightsModelSelect.value = settings.ironSightsModel;
 
-  // Update preview for iron sights/aperture scopes
   if (settings.scopeType === "ironSights" || settings.scopeType === "aperture") {
     document.getElementById("ironSightsPreview").style.display = "block";
     ironSightsPreviewImg.src = ironSightsModelMap[settings.ironSightsModel];
@@ -107,26 +114,22 @@ function updatePauseMenuInputs() {
   }
 }
 
-// Listen for scope type changes
 scopeTypeSelect.addEventListener("change", function() {
   settings.scopeType = this.value;
   updatePauseMenuInputs();
 });
 
-// Listen for iron sights model changes
 ironSightsModelSelect.addEventListener("change", function() {
   settings.ironSightsModel = this.value;
   updatePauseMenuInputs();
 });
 
-// Save settings when button is clicked
 saveSettingsButton.addEventListener("click", function() {
   settings.sensitivity = parseFloat(sensitivityInput.value);
   settings.maxDistance = parseFloat(maxDistanceInput.value);
   settings.numTargets = parseInt(numTargetsInput.value);
   settings.muzzleVelocity = parseFloat(muzzleVelocityInput.value);
   settings.targetMaxSpeed = parseFloat(targetMaxSpeedInput.value);
-  // Removed targetAcceleration and targetSteerAccel assignments
   settings.playerHeight = parseFloat(playerHeightInput.value);
   settings.showDistance = showDistanceInput.checked;
   settings.hardMode = hardModeInput.checked;
@@ -134,26 +137,40 @@ saveSettingsButton.addEventListener("click", function() {
   settings.strafeFrequency = parseFloat(strafeFrequencyInput.value);
   settings.scopeType = scopeTypeSelect.value;
   settings.ironSightsScale = parseFloat(ironSightsScaleInput.value);
-  settings.ironSightsModel = ironSightsModelSelect.value;  // Save the chosen iron sights model
+  settings.ironSightsModel = ironSightsModelSelect.value;
   saveSettings();
 
   if (yawObject) {
     yawObject.position.y = settings.playerHeight;
   }
-  // Update iron sights overlay scale if used
   ironSightsImg.style.transform = "scale(" + settings.ironSightsScale + ")";
 });
 
 resumeGameButton.addEventListener("click", togglePause);
 
-// Toggle pause menu with ESC key
 document.addEventListener('keydown', function(e) {
   if (e.key === "Escape") { togglePause(); }
+  if (e.code === "Space") { moveUp = true; }
+  if (e.key === "Control") { moveDown = true; }
 });
+document.addEventListener('keyup', function(e) {
+  if (e.code === "Space") { moveUp = false; }
+  if (e.key === "Control") { moveDown = false; }
+});
+
 function togglePause() {
   paused = !paused;
   pauseMenu.style.display = paused ? "block" : "none";
   if (paused) { updatePauseMenuInputs(); }
+}
+
+function updateAccuracyDisplay() {
+  if (shotsFired > 0) {
+    let headPercent = ((headshotCount / shotsFired) * 100).toFixed(1);
+    let bodyPercent = ((bodyshotCount / shotsFired) * 100).toFixed(1);
+    let missPercent = ((missCount / shotsFired) * 100).toFixed(1);
+    accuracyDisplay.textContent = 'Accuracy: H: ' + headPercent + '% | B: ' + bodyPercent + '% | M: ' + missPercent + '%';
+  }
 }
 
 // --- Text Sprite Functions (for distance labels) ---
@@ -231,7 +248,6 @@ function init() {
   gridHelper.position.y = 0;
   scene.add(gridHelper);
 
-  // Request pointer lock and shoot on left-click.
   renderer.domElement.addEventListener('click', function(e) {
     if (document.pointerLockElement !== renderer.domElement) {
       renderer.domElement.requestPointerLock();
@@ -253,21 +269,25 @@ function init() {
 function createTarget() {
   const targetGroup = new THREE.Group();
 
+  // --- Body (broadened) ---
   const bodyGeometry = new THREE.SphereGeometry(0.15, 32, 32);
   const bodyScaleY = 1.5 / 0.3;
-  bodyGeometry.scale(1.2, bodyScaleY, 1.2);
+  // Increase the X and Z scale to make the body broader
+  bodyGeometry.scale(1.5, bodyScaleY, 1.5);
   bodyGeometry.translate(0, 0.15 * bodyScaleY, 0);
 
   const bodyMaterial = new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff });
   const bodyMesh = new THREE.Mesh(bodyGeometry, bodyMaterial);
+  bodyMesh.name = "body";  // So we can reference it for collisions
 
-  const headGeometry = new THREE.SphereGeometry(0.15, 32, 32);
+  // --- Head ---
+  const headGeometry = new THREE.SphereGeometry(0.13, 32, 32);
   const headMaterial = new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff });
   const headMesh = new THREE.Mesh(headGeometry, headMaterial);
   headMesh.name = "head";
   headMesh.position.y = 1.5 + 0.15;
 
-  const helperGeometry = new THREE.SphereGeometry(0.18, 16, 16);
+  const helperGeometry = new THREE.SphereGeometry(0.15,  15, 15);
   const helperMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00, wireframe: true });
   const headHelper = new THREE.Mesh(helperGeometry, helperMaterial);
   headHelper.name = "headHelper";
@@ -275,6 +295,9 @@ function createTarget() {
 
   targetGroup.add(bodyMesh);
   targetGroup.add(headMesh);
+
+  // Initial body hit count
+  targetGroup.userData.bodyHits = 0;
 
   let distance = 10 + Math.random() * (settings.maxDistance - 10);
   let angle = Math.random() * Math.PI * 2;
@@ -313,6 +336,10 @@ function shootBullet() {
   bullet.userData.velocity = bulletDirection.multiplyScalar(settings.muzzleVelocity);
   bullets.push(bullet);
   scene.add(bullet);
+
+  // Count this shot
+  shotsFired++;
+  updateAccuracyDisplay();
 }
 function lineSphereIntersection(p0, p1, center, radius) {
   let d = p1.clone().sub(p0);
@@ -326,6 +353,57 @@ function lineSphereIntersection(p0, p1, center, radius) {
   let t1 = (-b - discriminant) / (2 * a);
   let t2 = (-b + discriminant) / (2 * a);
   return ((t1 >= 0 && t1 <= 1) || (t2 >= 0 && t2 <= 1));
+}
+function lineCapsuleIntersection(p0, p1, capsuleStart, capsuleEnd, radius) {
+  // p0, p1: endpoints of the bullet's line segment
+  // capsuleStart, capsuleEnd: endpoints of the capsule (torso hitbox)
+  // radius: radius of the capsule
+
+  let d = p1.clone().sub(p0);        // Bullet direction vector.
+  let n = capsuleEnd.clone().sub(capsuleStart); // Capsule central axis.
+
+  // m is the vector from the capsule start to the bullet start.
+  let m = p0.clone().sub(capsuleStart);
+
+  // Precompute dot products.
+  let dd = d.dot(d);
+  let nn = n.dot(n);
+  let nd = n.dot(d);
+  let mn = m.dot(n);
+  let md = m.dot(d);
+
+  // Compute the denominator of the parameters.
+  let denom = dd * nn - nd * nd;
+  let t, s;
+
+  // Compute the parameter t (for the bullet line)
+  if (denom !== 0) {
+    t = (nd * mn - nn * md) / denom;
+  } else {
+    t = 0;
+  }
+
+  // Clamp t to [0, 1] to ensure it is within the bullet's segment.
+  t = Math.max(0, Math.min(1, t));
+
+  // Compute the parameter s (for the capsule line)
+  s = (t * nd + mn) / nn;
+  // Clamp s to [0, 1] so it falls on the capsule segment.
+  s = Math.max(0, Math.min(1, s));
+
+  // Recompute t given the clamped s, if the lines aren't parallel.
+  if (denom !== 0) {
+    t = (s * nd - md) / dd;
+    t = Math.max(0, Math.min(1, t));
+  }
+
+  // Find the closest points on each segment.
+  let closestPointLine = p0.clone().add(d.clone().multiplyScalar(t));
+  let closestPointCapsule = capsuleStart.clone().add(n.clone().multiplyScalar(s));
+
+  // If the distance between these two points is within the radius, there's an intersection.
+  let distSquared = closestPointLine.distanceToSquared(closestPointCapsule);
+  return distSquared <= radius * radius;
 }
 
 // --- Event Handlers ---
@@ -377,6 +455,16 @@ function animate() {
   let dt = (currentTime - lastTime) / 1000;
   lastTime = currentTime;
 
+  // Smooth vertical movement
+  if (moveUp) {
+    yawObject.position.y += 5 * dt;
+    settings.playerHeight = yawObject.position.y;
+  }
+  if (moveDown) {
+    yawObject.position.y -= 5 * dt;
+    settings.playerHeight = yawObject.position.y;
+  }
+
   if (paused) {
     renderer.render(scene, camera);
     return;
@@ -386,12 +474,17 @@ function animate() {
     let bullet = bullets[i];
     let prevPos = bullet.userData.prevPosition.clone();
     bullet.position.add(bullet.userData.velocity.clone().multiplyScalar(dt));
+
+    // Check collision with each target
     for (let j = targets.length - 1; j >= 0; j--) {
       let target = targets[j];
       let head = target.getObjectByName("head");
       let headWorldPos = new THREE.Vector3();
       head.getWorldPosition(headWorldPos);
+
+      // Check for headshot (instant kill)
       if (lineSphereIntersection(prevPos, bullet.position, headWorldPos, 0.15)) {
+        headshotCount++;
         score++;
         document.getElementById('score').textContent = 'Score: ' + score;
         showHitMarker();
@@ -399,16 +492,46 @@ function animate() {
         bullets.splice(i, 1);
         scene.remove(target);
         targets.splice(j, 1);
+        updateAccuracyDisplay();
         break;
+      } else {
+        // Check for body shot (needs 2 hits to kill)
+        let body = target.getObjectByName("body");
+        if (body) {
+          let bodyWorldPos = new THREE.Vector3();
+          body.getWorldPosition(bodyWorldPos);
+          let capsuleStart = target.position.clone().add(new THREE.Vector3(0, 0.1, 0)); // lower torso
+          let capsuleEnd = target.position.clone().add(new THREE.Vector3(0, 1.33, 0));  // upper torso
+          let capsuleRadius = 0.25;  // Adjust this based on your target's dimensions.
+          if (lineCapsuleIntersection(prevPos, bullet.position, capsuleStart, capsuleEnd, capsuleRadius)) {
+            bodyshotCount++;
+            target.userData.bodyHits = (target.userData.bodyHits || 0) + 1;
+            showHitMarker();
+            scene.remove(bullet);
+            bullets.splice(i, 1);
+            if (target.userData.bodyHits >= 2) {
+              score++;
+              document.getElementById('score').textContent = 'Score: ' + score;
+              scene.remove(target);
+              targets.splice(j, 1);
+            }
+            updateAccuracyDisplay();
+            break;
+          }
+        }
       }
     }
     bullet.userData.prevPosition.copy(bullet.position);
     if (bullet.position.distanceTo(camera.position) > 1000) {
+      // Count as a miss if the bullet goes too far without hitting a target
+      missCount++;
+      updateAccuracyDisplay();
       scene.remove(bullet);
       bullets.splice(i, 1);
     }
   }
 
+  // Update targets movement
   for (let i = targets.length - 1; i >= 0; i--) {
     let target = targets[i];
     let v = target.userData.velocity;

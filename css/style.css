@@ -11,6 +11,14 @@ body {
   font-size: 24px;
   z-index: 1;
 }
+#accuracy {
+  position: absolute;
+  top: 40px;
+  left: 10px;
+  color: white;
+  font-size: 20px;
+  z-index: 1;
+}
 /* Info text */
 #info {
   position: absolute;
