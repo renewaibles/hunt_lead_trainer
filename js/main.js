@@ -1,8 +1,8 @@
 // --- Mapping for Iron Sights Models ---
 const ironSightsModelMap = {
-  model1: "model1.png",
-  model2: "model2.png",
-  model3: "model3.png"
+  model1: "source/model1.png",
+  model2: "source/model2.png",
+  model3: "source/model3.png"
 };
 
 // --- Mapping for Scope Zoom Factors ---
@@ -15,23 +15,26 @@ const scopeZoomFactors = {
 };
 
 // --- Settings and Persistence ---
+// Removed targetAcceleration and targetSteerAccel from user settings
 let settings = {
-  sensitivity: 0.0015,
+  sensitivity: 0.001,
   maxDistance: 100,
   numTargets: 10,
   muzzleVelocity: 400,
   targetMaxSpeed: 5,
-  targetAcceleration: 5,
-  targetSteerAccel: 5,
-  playerHeight: 1.8,
+  playerHeight: 10,
   showDistance: true,
   hardMode: false,
-  strafeIntensity: 1.0,
-  strafeFrequency: 1.0,
+  strafeIntensity: 15.0,
+  strafeFrequency: 10.0,
   ironSightsModel: "model1",
-  ironSightsScale: 1.0,
+  ironSightsScale: 0.5,
   scopeType: "ironSights"
 };
+
+// Fixed constants for target movement behavior.
+const TARGET_ACCELERATION = 5;
+const TARGET_STEER_ACCEL = 5;
 
 function loadSettings() {
   let stored = localStorage.getItem('shooterConfig');
@@ -62,8 +65,7 @@ const maxDistanceInput = document.getElementById("maxDistanceInput");
 const numTargetsInput = document.getElementById("numTargetsInput");
 const muzzleVelocityInput = document.getElementById("muzzleVelocityInput");
 const targetMaxSpeedInput = document.getElementById("targetMaxSpeedInput");
-const targetAccelerationInput = document.getElementById("targetAccelerationInput");
-const targetSteerAccelInput = document.getElementById("targetSteerAccelInput");
+// Removed targetAccelerationInput and targetSteerAccelInput
 const playerHeightInput = document.getElementById("playerHeightInput");
 const showDistanceInput = document.getElementById("showDistanceInput");
 const hardModeInput = document.getElementById("hardModeInput");
@@ -83,8 +85,7 @@ function updatePauseMenuInputs() {
   numTargetsInput.value = settings.numTargets;
   muzzleVelocityInput.value = settings.muzzleVelocity;
   targetMaxSpeedInput.value = settings.targetMaxSpeed;
-  targetAccelerationInput.value = settings.targetAcceleration;
-  targetSteerAccelInput.value = settings.targetSteerAccel;
+  // Removed targetAcceleration and targetSteerAccel inputs
   playerHeightInput.value = settings.playerHeight;
   showDistanceInput.checked = settings.showDistance;
   hardModeInput.checked = settings.hardMode;
@@ -92,7 +93,7 @@ function updatePauseMenuInputs() {
   strafeFrequencyInput.value = settings.strafeFrequency;
   scopeTypeSelect.value = settings.scopeType;
   ironSightsScaleInput.value = settings.ironSightsScale;
-  
+
   // Update preview for iron sights/aperture scopes
   if (settings.scopeType === "ironSights" || settings.scopeType === "aperture") {
     document.getElementById("ironSightsPreview").style.display = "block";
@@ -116,8 +117,7 @@ saveSettingsButton.addEventListener("click", function() {
   settings.numTargets = parseInt(numTargetsInput.value);
   settings.muzzleVelocity = parseFloat(muzzleVelocityInput.value);
   settings.targetMaxSpeed = parseFloat(targetMaxSpeedInput.value);
-  settings.targetAcceleration = parseFloat(targetAccelerationInput.value);
-  settings.targetSteerAccel = parseFloat(targetSteerAccelInput.value);
+  // Removed targetAcceleration and targetSteerAccel assignments
   settings.playerHeight = parseFloat(playerHeightInput.value);
   settings.showDistance = showDistanceInput.checked;
   settings.hardMode = hardModeInput.checked;
@@ -126,7 +126,7 @@ saveSettingsButton.addEventListener("click", function() {
   settings.scopeType = scopeTypeSelect.value;
   settings.ironSightsScale = parseFloat(ironSightsScaleInput.value);
   saveSettings();
-  
+
   if (yawObject) {
     yawObject.position.y = settings.playerHeight;
   }
@@ -334,10 +334,10 @@ function onMouseDown(event) {
     let zoomValue = scopeZoomFactors[settings.scopeType];
     camera.zoom = zoomValue;
     camera.updateProjectionMatrix();
-    
+
     if (settings.scopeType === "ironSights" || settings.scopeType === "aperture") {
       ironSightsImg.src = ironSightsModelMap[settings.ironSightsModel];
-      ironSightsImg.style.transform = "translate(-50%, 0) scale(" + settings.ironSightsScale + ")";
+      ironSightsImg.style.transform = "scale(" + settings.ironSightsScale + ")";
       document.getElementById("ironSights").style.display = "block";
       document.getElementById("crosshair").style.display = "none";
     } else {
@@ -402,7 +402,7 @@ function animate() {
   for (let i = targets.length - 1; i >= 0; i--) {
     let target = targets[i];
     let v = target.userData.velocity;
-    const acceleration = settings.targetAcceleration;
+    const acceleration = TARGET_ACCELERATION;
     let randomAccel = new THREE.Vector3(
       (Math.random() - 0.5) * acceleration * dt,
       0,
@@ -411,18 +411,29 @@ function animate() {
     v.add(randomAccel);
 
     if (settings.hardMode) {
-      let perpendicular = new THREE.Vector3(-v.z, 0, v.x);
-      if (perpendicular.length() === 0) { perpendicular.set(1, 0, 0); }
-      perpendicular.normalize();
-      let timeSeconds = performance.now() / 1000;
-      let strafeAccel = perpendicular.multiplyScalar(Math.sin(timeSeconds * settings.strafeFrequency) * settings.strafeIntensity * dt);
+      let currentTime = performance.now() / 1000;
+      if (!target.userData.nextStrafeTime || currentTime >= target.userData.nextStrafeTime) {
+        let perpendicular = new THREE.Vector3(-v.z, 0, v.x);
+        if (perpendicular.length() === 0) {
+          perpendicular.set(1, 0, 0);
+        }
+        perpendicular.normalize();
+        if (Math.random() < 0.5) {
+          perpendicular.negate();
+        }
+        target.userData.strafeDirection = perpendicular;
+        target.userData.nextStrafeTime = currentTime + (0.5 + Math.random());
+      }
+      let randomFactor = 0.5 + Math.random();
+      let strafeAccel = target.userData.strafeDirection.clone()
+                         .multiplyScalar(settings.strafeIntensity * dt * randomFactor);
       v.add(strafeAccel);
     }
 
     if (v.length() > settings.targetMaxSpeed) v.setLength(settings.targetMaxSpeed);
     if (target.position.length() > settings.maxDistance) {
       let inward = target.position.clone().negate().normalize();
-      const steerAccel = settings.targetSteerAccel;
+      const steerAccel = TARGET_STEER_ACCEL;
       v.add(inward.multiplyScalar(steerAccel * dt));
     }
     target.userData.velocity = v;
