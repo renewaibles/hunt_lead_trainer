@@ -16,6 +16,7 @@ const scopeZoomFactors = {
 
 // --- Settings and Persistence ---
 let settings = {
+  fov: 94,
   sensitivity: 0.001,
   maxDistance: 100,
   numTargets: 10,
@@ -103,7 +104,13 @@ const ironSightsImg = document.getElementById("ironSightsImg");
 const accuracyDisplay = document.getElementById("accuracy");
 
 function updatePauseMenuInputs() {
-  sensitivityInput.value = settings.sensitivity;
+  const baseRatio = 0.000307 / 0.6;
+  const simFovRad = THREE.MathUtils.degToRad(settings.fov / 2);
+  const huntFovRad = THREE.MathUtils.degToRad(94 / 2);
+  const fovScale = Math.tan(huntFovRad) / Math.tan(simFovRad); // Note: inverse of save-side
+
+  const huntSensDisplay = settings.sensitivity / (baseRatio * fovScale);
+  sensitivityInput.value = huntSensDisplay.toFixed(3);
   maxDistanceInput.value = settings.maxDistance;
   numTargetsInput.value = settings.numTargets;
   muzzleVelocityInput.value = settings.muzzleVelocity;
@@ -119,6 +126,7 @@ function updatePauseMenuInputs() {
   document.getElementById("shotCycleTimeInput").value = settings.shotCycleTime;
   document.getElementById("swayAmplitudeInput").value = settings.swayAmplitude;
   document.getElementById("swayFrequencyInput").value = settings.swayFrequency;
+  document.getElementById("fovInput").value = settings.fov;
 
   if (settings.scopeType === "ironSights" || settings.scopeType === "aperture") {
     document.getElementById("ironSightsPreview").style.display = "block";
@@ -139,7 +147,14 @@ ironSightsModelSelect.addEventListener("change", function() {
 });
 
 saveSettingsButton.addEventListener("click", function() {
-  settings.sensitivity = parseFloat(sensitivityInput.value);
+  const huntSens = parseFloat(sensitivityInput.value);
+  if (!isNaN(huntSens)) {
+    const baseRatio = 0.000307 / 0.6;
+    const simFovRad = THREE.MathUtils.degToRad(settings.fov / 2);
+    const huntFovRad = THREE.MathUtils.degToRad(94 / 2); // Assuming Hunt uses 94 FOV
+    const fovScale = Math.tan(simFovRad) / Math.tan(huntFovRad);
+    settings.sensitivity = huntSens * baseRatio * fovScale;
+  }
   settings.maxDistance = parseFloat(maxDistanceInput.value);
   settings.numTargets = parseInt(numTargetsInput.value);
   settings.muzzleVelocity = parseFloat(muzzleVelocityInput.value);
@@ -155,6 +170,10 @@ saveSettingsButton.addEventListener("click", function() {
   settings.shotCycleTime = parseFloat(document.getElementById("shotCycleTimeInput").value);
   settings.swayAmplitude = parseFloat(document.getElementById("swayAmplitudeInput").value);
   settings.swayFrequency = parseFloat(document.getElementById("swayFrequencyInput").value);
+  settings.fov = parseFloat(document.getElementById("fovInput").value);
+  camera.fov = settings.fov;
+  camera.updateProjectionMatrix();
+
   saveSettings();
 
   if (yawObject) {
@@ -292,8 +311,7 @@ function showHitMarker() {
 function init() {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x111111);
-
-  camera = new THREE.PerspectiveCamera(94, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera = new THREE.PerspectiveCamera(settings.fov, window.innerWidth / window.innerHeight, 0.1, 1000);
   yawObject = new THREE.Object3D();
   pitchObject = new THREE.Object3D();
   yawObject.add(pitchObject);
@@ -482,6 +500,18 @@ function shootBullet() {
   updateAccuracyDisplay();
 }
 
+function convertHuntSensitivity(huntSens, simFov, huntFov = 94) {
+  // Base ratio from matching 0.6 Hunt to 0.000307 sim at FOV 94
+  const baseRatio = 0.000307 / 0.6;
+
+  // Optional: If simFOV differs from Hunt's, scale by tan(FOV/2)
+  const simFovRad = THREE.MathUtils.degToRad(simFov / 2);
+  const huntFovRad = THREE.MathUtils.degToRad(huntFov / 2);
+  const fovScale = Math.tan(simFovRad) / Math.tan(huntFovRad);
+
+  return huntSens * baseRatio * fovScale;
+}
+
 function lineSphereIntersection(p0, p1, center, radius) {
   let d = p1.clone().sub(p0);
   let f = p0.clone().sub(center);
@@ -553,7 +583,7 @@ function onMouseMove(event) {
     let sensitivity = settings.sensitivity;
 
     if (isZoomed) {
-      let baseFov = 94;
+      let baseFov = settings.fov;
       let zoomFactor = scopeZoomFactors[settings.scopeType] || 1;
       let currentFov = baseFov / zoomFactor;
 
