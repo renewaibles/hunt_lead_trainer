@@ -63,6 +63,7 @@ let score = 0;
 let lastTime = performance.now();
 let paused = false;
 let cameraSwayTime = 0;
+let isZoomed = false;
 
 // Accuracy tracking variables
 let shotsFired = 0;
@@ -549,22 +550,24 @@ function lineCapsuleIntersection(p0, p1, capsuleStart, capsuleEnd, radius) {
 // --- Event Handlers ---
 function onMouseMove(event) {
   if (document.pointerLockElement === renderer.domElement) {
-    let baseFov = 94; // Your default unzoomed FOV
-    let zoomFactor = scopeZoomFactors[settings.scopeType] || 1;
-    let currentFov = baseFov / zoomFactor;
+    let sensitivity = settings.sensitivity;
 
-    let sensitivityScale = Math.tan(THREE.MathUtils.degToRad(currentFov / 2)) / Math.tan(THREE.MathUtils.degToRad(baseFov / 2));
-    let sensitivity = settings.sensitivity * sensitivityScale;
+    if (isZoomed) {
+      let baseFov = 94;
+      let zoomFactor = scopeZoomFactors[settings.scopeType] || 1;
+      let currentFov = baseFov / zoomFactor;
+
+      let sensitivityScale = Math.tan(THREE.MathUtils.degToRad(currentFov / 2)) / Math.tan(THREE.MathUtils.degToRad(baseFov / 2));
+      sensitivity *= sensitivityScale;
+    }
 
     yaw -= event.movementX * sensitivity;
     pitch -= event.movementY * sensitivity;
-    pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));
-    yawObject.rotation.y = yaw;
-    pitchObject.rotation.x = pitch;
   }
 }
 function onMouseDown(event) {
   if (event.button === 2) {
+    isZoomed = true;
     let zoomValue = scopeZoomFactors[settings.scopeType];
     camera.zoom = zoomValue;
     camera.updateProjectionMatrix();
@@ -581,6 +584,7 @@ function onMouseDown(event) {
 }
 function onMouseUp(event) {
   if (event.button === 2) {
+    isZoomed = false;
     camera.zoom = 1;
     camera.updateProjectionMatrix();
     document.getElementById("ironSights").style.display = "none";
