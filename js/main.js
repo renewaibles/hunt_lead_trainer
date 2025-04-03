@@ -24,6 +24,7 @@ let settings = {
   playerHeight: 10,
   showDistance: true,
   hardMode: false,
+  showAimMarker: false,
   strafeIntensity: 15.0,
   strafeFrequency: 10.0,
   ironSightsModel: "model1",
@@ -110,6 +111,7 @@ function updatePauseMenuInputs() {
   strafeFrequencyInput.value = settings.strafeFrequency;
   scopeTypeSelect.value = settings.scopeType;
   ironSightsModelSelect.value = settings.ironSightsModel;
+  document.getElementById("showAimMarkerInput").checked = settings.showAimMarker;
   document.getElementById("shotCycleTimeInput").value = settings.shotCycleTime;
 
   if (settings.scopeType === "ironSights" || settings.scopeType === "aperture") {
@@ -143,6 +145,7 @@ saveSettingsButton.addEventListener("click", function() {
   settings.strafeFrequency = parseFloat(strafeFrequencyInput.value);
   settings.scopeType = scopeTypeSelect.value;
   settings.ironSightsModel = ironSightsModelSelect.value;
+  settings.showAimMarker = document.getElementById("showAimMarkerInput").checked;
   settings.shotCycleTime = parseFloat(document.getElementById("shotCycleTimeInput").value);
   saveSettings();
 
@@ -259,6 +262,7 @@ function init() {
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
 
+
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
   scene.add(ambientLight);
   const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
@@ -287,6 +291,35 @@ function init() {
   window.addEventListener('resize', onWindowResize, false);
 
   animate();
+}
+
+function updateAimMarkerForTarget(target) {
+  const head = target.getObjectByName("head");
+  if (!head || !target.userData.aimMarker) {
+    return;
+  }
+
+  // Get target head world position.
+  const targetHeadPos = new THREE.Vector3();
+  head.getWorldPosition(targetHeadPos);
+
+  // Get player's world position.
+  const playerPos = new THREE.Vector3();
+  camera.getWorldPosition(playerPos);
+
+  // Use target velocity.
+  const enemyVelocity = target.userData.velocity.clone();
+
+  // Calculate intercept time.
+  const interceptTime = calculateInterceptTime(playerPos, targetHeadPos, enemyVelocity, settings.muzzleVelocity);
+  if (interceptTime !== null) {
+    // Calculate intercept position.
+    const interceptPos = targetHeadPos.clone().add(enemyVelocity.clone().multiplyScalar(interceptTime));
+    target.userData.aimMarker.position.copy(interceptPos);
+    target.userData.aimMarker.visible = true;
+  } else {
+    target.userData.aimMarker.visible = false;
+  }
 }
 
 // --- Target (Person) Creation ---
@@ -333,6 +366,14 @@ function createTarget() {
   targetGroup.userData.velocity = new THREE.Vector3(Math.cos(sprintAngle), 0, Math.sin(sprintAngle))
                                     .multiplyScalar(settings.targetMaxSpeed);
 
+  const aimMarker = new THREE.Mesh(
+    new THREE.SphereGeometry(0.15, 8, 8),
+    new THREE.MeshBasicMaterial({ color: 0xff0000 })
+  );
+  aimMarker.visible = false;  // Initially hidden
+  targetGroup.userData.aimMarker = aimMarker;
+  scene.add(aimMarker);
+
   return targetGroup;
 }
 function spawnTarget() {
@@ -345,6 +386,25 @@ function maintainTargets() {
     spawnTarget();
   }
 }
+
+function calculateInterceptTime(P, T, Vt, bulletSpeed) {
+  const diff = new THREE.Vector3().subVectors(T, P);
+  const a = Vt.lengthSq() - bulletSpeed * bulletSpeed;
+  const b = 2 * diff.dot(Vt);
+  const c = diff.lengthSq();
+  const discriminant = b * b - 4 * a * c;
+
+  if (discriminant < 0) {
+    return null; // No valid intercept time.
+  }
+  // Two possible solutions; choose the smallest positive time.
+  const t1 = (-b - Math.sqrt(discriminant)) / (2 * a);
+  const t2 = (-b + Math.sqrt(discriminant)) / (2 * a);
+  let t = Math.min(t1, t2);
+  if (t < 0) t = Math.max(t1, t2);
+  return t > 0 ? t : null;
+}
+
 
 // --- Shooting and Collision Detection ---
 function shootBullet() {
@@ -554,6 +614,7 @@ function animate() {
         scene.remove(bullet);
         bullets.splice(i, 1);
         scene.remove(target);
+        scene.remove(target.userData.aimMarker);
         targets.splice(j, 1);
         updateAccuracyDisplay();
         break;
@@ -576,6 +637,7 @@ function animate() {
               score++;
               document.getElementById('score').textContent = 'Score: ' + score;
               scene.remove(target);
+              scene.remove(target.userData.aimMarker);
               targets.splice(j, 1);
             }
             updateAccuracyDisplay();
@@ -652,6 +714,17 @@ function animate() {
   }
 
   maintainTargets();
+  if (settings.showAimMarker) {
+    targets.forEach(target => {
+      updateAimMarkerForTarget(target);
+    });
+  } else {
+    targets.forEach(target => {
+      if (target.userData.aimMarker) {
+        target.userData.aimMarker.visible = false;
+      }
+    });
+  }
   renderer.render(scene, camera);
 }
 
