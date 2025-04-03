@@ -29,7 +29,9 @@ let settings = {
   strafeFrequency: 10.0,
   ironSightsModel: "model1",
   scopeType: "ironSights",
-  shotCycleTime: 0.5
+  shotCycleTime: 0.5,
+  swayAmplitude: 0.02,
+  swayFrequency: 0.1
 };
 
 let lastShotTime = 0;  // Global variable to track last shot time
@@ -60,6 +62,7 @@ let bullets = [];
 let score = 0;
 let lastTime = performance.now();
 let paused = false;
+let cameraSwayTime = 0;
 
 // Accuracy tracking variables
 let shotsFired = 0;
@@ -113,6 +116,8 @@ function updatePauseMenuInputs() {
   ironSightsModelSelect.value = settings.ironSightsModel;
   document.getElementById("showAimMarkerInput").checked = settings.showAimMarker;
   document.getElementById("shotCycleTimeInput").value = settings.shotCycleTime;
+  document.getElementById("swayAmplitudeInput").value = settings.swayAmplitude;
+  document.getElementById("swayFrequencyInput").value = settings.swayFrequency;
 
   if (settings.scopeType === "ironSights" || settings.scopeType === "aperture") {
     document.getElementById("ironSightsPreview").style.display = "block";
@@ -147,6 +152,8 @@ saveSettingsButton.addEventListener("click", function() {
   settings.ironSightsModel = ironSightsModelSelect.value;
   settings.showAimMarker = document.getElementById("showAimMarkerInput").checked;
   settings.shotCycleTime = parseFloat(document.getElementById("shotCycleTimeInput").value);
+  settings.swayAmplitude = parseFloat(document.getElementById("swayAmplitudeInput").value);
+  settings.swayFrequency = parseFloat(document.getElementById("swayFrequencyInput").value);
   saveSettings();
 
   if (yawObject) {
@@ -197,6 +204,41 @@ function updateAccuracyDisplay() {
     accuracyDisplay.textContent = 'Accuracy: H: ' + headPercent + '% | B: ' + bodyPercent + '% | M: ' + missPercent + '%';
   }
 }
+function updateCameraSway(dt) {
+  if (document.pointerLockElement === renderer.domElement) {
+    cameraSwayTime += dt;
+    const baseAmplitude = settings.swayAmplitude;  // Base amplitude of the sway.
+    const swayFrequency = settings.swayFrequency;    // Frequency for the figure eight.
+
+    // Slowly vary the overall size (amplitude) over time.
+    const amplitudeVariation = 1 + 0.2 * Math.sin(cameraSwayTime * 0.5);
+    const amplitude = baseAmplitude * amplitudeVariation;
+
+    // Use a parameter t that increases linearly with time.
+    // This drives the figure‑8 movement.
+    const t = cameraSwayTime * 2 * Math.PI * swayFrequency;
+
+    // Lissajous figure‑8: x = sin(t), y = sin(2t)
+    // This produces a lying 8 pattern.
+    let x = amplitude * Math.sin(t);
+    let y = amplitude * Math.sin(t * 2);
+
+    // Add a smooth jitter around the center.
+    // The jitter frequencies and strength are chosen to be subtle.
+    const jitterStrength = 0.05 * baseAmplitude; // Adjust as desired.
+    const jitterX = jitterStrength * Math.sin(cameraSwayTime * 3.7);
+    const jitterY = jitterStrength * Math.sin(cameraSwayTime * 4.1);
+
+    // Combine the figure‑8 offsets with the jitter.
+    const yawOffset = x + jitterX;
+    const pitchOffset = y + jitterY;
+
+    // Update the camera rotations.
+    yawObject.rotation.y = yaw + yawOffset;
+    pitchObject.rotation.x = pitch + pitchOffset * 0.35;
+  }
+}
+
 
 // --- Text Sprite Functions (for distance labels) ---
 function createTextSprite(message) {
@@ -414,28 +456,27 @@ function shootBullet() {
   }
   lastShotTime = now;
 
-  // For iron sights or aperture, make the image partially transparent during reload
-  if (settings.scopeType === "ironSights" || settings.scopeType === "aperture") {
-    ironSightsImg.style.opacity = "0.8";
-    setTimeout(() => {
-      ironSightsImg.style.opacity = "1";
-    }, settings.shotCycleTime * 1000);
-  }
+  // Force an update of the camera sway (with zero delta so time isn’t advanced)
+  updateCameraSway(0);
 
+  // Get the effective direction from the camera (which now includes the sway offset)
+  let bulletDirection = new THREE.Vector3();
+  camera.getWorldDirection(bulletDirection);
+
+  // Spawn bullet as before:
   const bulletGeometry = new THREE.SphereGeometry(0.05, 8, 8);
   const bulletMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
   const bullet = new THREE.Mesh(bulletGeometry, bulletMaterial);
+
   let bulletStart = new THREE.Vector3();
   camera.getWorldPosition(bulletStart);
   bullet.position.copy(bulletStart);
   bullet.userData.prevPosition = bullet.position.clone();
-  let bulletDirection = new THREE.Vector3();
-  camera.getWorldDirection(bulletDirection);
+
   bullet.userData.velocity = bulletDirection.multiplyScalar(settings.muzzleVelocity);
   bullets.push(bullet);
   scene.add(bullet);
 
-  // Count this shot
   shotsFired++;
   updateAccuracyDisplay();
 }
@@ -725,6 +766,7 @@ function animate() {
       }
     });
   }
+  updateCameraSway(dt);
   renderer.render(scene, camera);
 }
 
