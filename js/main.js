@@ -27,7 +27,6 @@ let settings = {
   strafeIntensity: 15.0,
   strafeFrequency: 10.0,
   ironSightsModel: "model1",
-  ironSightsScale: 0.5,
   scopeType: "ironSights",
   shotCycleTime: 0.5
 };
@@ -116,7 +115,6 @@ function updatePauseMenuInputs() {
   if (settings.scopeType === "ironSights" || settings.scopeType === "aperture") {
     document.getElementById("ironSightsPreview").style.display = "block";
     ironSightsPreviewImg.src = ironSightsModelMap[settings.ironSightsModel];
-    ironSightsPreviewImg.style.transform = "translate(-50%, -50%) scale(" + settings.ironSightsScale + ")";
   } else {
     document.getElementById("ironSightsPreview").style.display = "none";
   }
@@ -151,7 +149,6 @@ saveSettingsButton.addEventListener("click", function() {
   if (yawObject) {
     yawObject.position.y = settings.playerHeight;
   }
-  ironSightsImg.style.transform = "scale(" + settings.ironSightsScale + ")";
 });
 
 resumeGameButton.addEventListener("click", togglePause);
@@ -467,7 +464,6 @@ function onMouseDown(event) {
 
     if (settings.scopeType === "ironSights" || settings.scopeType === "aperture") {
       ironSightsImg.src = ironSightsModelMap[settings.ironSightsModel];
-      ironSightsImg.style.transform = "scale(" + settings.ironSightsScale + ")";
       document.getElementById("ironSights").style.display = "block";
       document.getElementById("crosshair").style.display = "none";
     } else {
