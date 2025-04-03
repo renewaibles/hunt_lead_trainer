@@ -90,7 +90,6 @@ const strafeFrequencyInput = document.getElementById("strafeFrequencyInput");
 const scopeTypeSelect = document.getElementById("scopeTypeSelect");
 const ironSightsModelSelect = document.getElementById("ironSightsModelSelect");
 const ironSightsPreviewImg = document.getElementById("ironSightsPreviewImg");
-const ironSightsScaleInput = document.getElementById("ironSightsScaleInput");
 const saveSettingsButton = document.getElementById("saveSettings");
 const resumeGameButton = document.getElementById("resumeGame");
 const hitMarker = document.getElementById("hitMarker");
@@ -111,7 +110,6 @@ function updatePauseMenuInputs() {
   strafeIntensityInput.value = settings.strafeIntensity;
   strafeFrequencyInput.value = settings.strafeFrequency;
   scopeTypeSelect.value = settings.scopeType;
-  ironSightsScaleInput.value = settings.ironSightsScale;
   ironSightsModelSelect.value = settings.ironSightsModel;
   document.getElementById("shotCycleTimeInput").value = settings.shotCycleTime;
 
@@ -146,7 +144,6 @@ saveSettingsButton.addEventListener("click", function() {
   settings.strafeIntensity = parseFloat(strafeIntensityInput.value);
   settings.strafeFrequency = parseFloat(strafeFrequencyInput.value);
   settings.scopeType = scopeTypeSelect.value;
-  settings.ironSightsScale = parseFloat(ironSightsScaleInput.value);
   settings.ironSightsModel = ironSightsModelSelect.value;
   settings.shotCycleTime = parseFloat(document.getElementById("shotCycleTimeInput").value);
   saveSettings();

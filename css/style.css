@@ -70,8 +70,8 @@ body {
   display: none;
 }
 #ironSights img {
-  width: 100px; /* Base width; scaling is applied via JS */
-  height: auto;
+  width: auto;
+  height: 50vh;
   opacity: 1;
   transform-origin: top center; /* Keep the top aligned when scaling */
 }
@@ -122,18 +122,21 @@ body {
   display: block; 
   margin: 10px 0; 
 }
-/* Iron Sights Preview in Settings */
+
 #ironSightsPreview {
-  width: 120px;        /* fixed width */
-  height: 120px;       /* fixed height */
-  overflow: hidden;    /* clips the scaled image */
+  width: 120px;
+  height: 120px;
+  overflow: hidden; /* Hide any overflow */
   position: relative;
   margin-bottom: 10px;
 }
+
 #ironSightsPreview img {
+  max-width: 100%;  /* Ensure the image width doesn't exceed the container */
+  max-height: 100%; /* Ensure the image height doesn't exceed the container */
   position: absolute;
   left: 50%;
   top: 50%;
-  transform: translate(-50%, -50%) scale(1);
+  transform: translate(-50%, -50%);
   pointer-events: none;
 }
