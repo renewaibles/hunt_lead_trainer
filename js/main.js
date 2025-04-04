@@ -17,7 +17,7 @@ const scopeZoomFactors = {
 // --- Settings and Persistence ---
 let settings = {
   fov: 94,
-  sensitivity: 0.6,
+  sensitivity: 0.000307,
   maxDistance: 100,
   numTargets: 10,
   muzzleVelocity: 400,
