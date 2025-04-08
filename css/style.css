@@ -43,7 +43,7 @@ body {
 #crosshair:before, #crosshair:after {
   content: '';
   position: absolute;
-  background: #ff0000;
+  background: #62ff00;
 }
 #crosshair:before {
   left: 50%;
