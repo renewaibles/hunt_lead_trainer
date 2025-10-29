@@ -2,7 +2,7 @@
 const ironSightsModelMap = {
   model1: "source/model1.png",
   model2: "source/model2.png",
-  model3: "source/model3.png"
+  model3: "source/model3.png",
 };
 
 // --- Mapping for Scope Zoom Factors ---
@@ -11,7 +11,7 @@ const scopeZoomFactors = {
   deadeye: 5,
   marksman: 8.46,
   sniper: 11,
-  aperture: 6.25
+  aperture: 6.25,
 };
 
 // --- Settings and Persistence ---
@@ -32,26 +32,28 @@ let settings = {
   scopeType: "ironSights",
   shotCycleTime: 0.5,
   swayAmplitude: 0.02,
-  swayFrequency: 0.1
+  swayFrequency: 0.1,
 };
 
-let lastShotTime = 0;  // Global variable to track last shot time
+let lastShotTime = 0; // Global variable to track last shot time
 
 // --- WASD Movement Global Flags ---
 let moveForward = false,
-    moveBackward = false,
-    moveLeft = false,
-    moveRight = false;
+  moveBackward = false,
+  moveLeft = false,
+  moveRight = false;
 
 const TARGET_ACCELERATION = 5;
 const TARGET_STEER_ACCEL = 5;
 
 function loadSettings() {
-  let stored = localStorage.getItem('shooterConfig');
-  if (stored) { settings = JSON.parse(stored); }
+  let stored = localStorage.getItem("shooterConfig");
+  if (stored) {
+    settings = JSON.parse(stored);
+  }
 }
 function saveSettings() {
-  localStorage.setItem('shooterConfig', JSON.stringify(settings));
+  localStorage.setItem("shooterConfig", JSON.stringify(settings));
 }
 loadSettings();
 
@@ -78,7 +80,8 @@ let moveDown = false;
 
 // For pointer lock aiming
 const mouse = new THREE.Vector2(0, 0);
-let yaw = 0, pitch = 0;
+let yaw = 0,
+  pitch = 0;
 
 // --- DOM Elements ---
 const pauseMenu = document.getElementById("pauseMenu");
@@ -122,13 +125,17 @@ function updatePauseMenuInputs() {
   strafeFrequencyInput.value = settings.strafeFrequency;
   scopeTypeSelect.value = settings.scopeType;
   ironSightsModelSelect.value = settings.ironSightsModel;
-  document.getElementById("showAimMarkerInput").checked = settings.showAimMarker;
+  document.getElementById("showAimMarkerInput").checked =
+    settings.showAimMarker;
   document.getElementById("shotCycleTimeInput").value = settings.shotCycleTime;
   document.getElementById("swayAmplitudeInput").value = settings.swayAmplitude;
   document.getElementById("swayFrequencyInput").value = settings.swayFrequency;
   document.getElementById("fovInput").value = settings.fov;
 
-  if (settings.scopeType === "ironSights" || settings.scopeType === "aperture") {
+  if (
+    settings.scopeType === "ironSights" ||
+    settings.scopeType === "aperture"
+  ) {
     document.getElementById("ironSightsPreview").style.display = "block";
     ironSightsPreviewImg.src = ironSightsModelMap[settings.ironSightsModel];
   } else {
@@ -136,17 +143,17 @@ function updatePauseMenuInputs() {
   }
 }
 
-scopeTypeSelect.addEventListener("change", function() {
+scopeTypeSelect.addEventListener("change", function () {
   settings.scopeType = this.value;
   updatePauseMenuInputs();
 });
 
-ironSightsModelSelect.addEventListener("change", function() {
+ironSightsModelSelect.addEventListener("change", function () {
   settings.ironSightsModel = this.value;
   updatePauseMenuInputs();
 });
 
-saveSettingsButton.addEventListener("click", function() {
+saveSettingsButton.addEventListener("click", function () {
   const huntSens = parseFloat(sensitivityInput.value);
   if (!isNaN(huntSens)) {
     const baseRatio = 0.000307 / 0.6;
@@ -166,10 +173,17 @@ saveSettingsButton.addEventListener("click", function() {
   settings.strafeFrequency = parseFloat(strafeFrequencyInput.value);
   settings.scopeType = scopeTypeSelect.value;
   settings.ironSightsModel = ironSightsModelSelect.value;
-  settings.showAimMarker = document.getElementById("showAimMarkerInput").checked;
-  settings.shotCycleTime = parseFloat(document.getElementById("shotCycleTimeInput").value);
-  settings.swayAmplitude = parseFloat(document.getElementById("swayAmplitudeInput").value);
-  settings.swayFrequency = parseFloat(document.getElementById("swayFrequencyInput").value);
+  settings.showAimMarker =
+    document.getElementById("showAimMarkerInput").checked;
+  settings.shotCycleTime = parseFloat(
+    document.getElementById("shotCycleTimeInput").value,
+  );
+  settings.swayAmplitude = parseFloat(
+    document.getElementById("swayAmplitudeInput").value,
+  );
+  settings.swayFrequency = parseFloat(
+    document.getElementById("swayFrequencyInput").value,
+  );
   settings.fov = parseFloat(document.getElementById("fovInput").value);
   camera.fov = settings.fov;
   camera.updateProjectionMatrix();
@@ -183,37 +197,63 @@ saveSettingsButton.addEventListener("click", function() {
 
 resumeGameButton.addEventListener("click", togglePause);
 
-document.addEventListener('keydown', function(e) {
+document.addEventListener("keydown", function (e) {
   // Existing keys (Escape, Space, Control) remain unchanged
-  if (e.key === "Escape") { togglePause(); }
-  if (e.code === "Space") { moveUp = true; }
-  if (e.key === "Control") { moveDown = true; }
+  if (e.key === "Escape") {
+    togglePause();
+  }
+  if (e.code === "Space") {
+    moveUp = true;
+  }
+  if (e.key === "Control") {
+    moveDown = true;
+  }
 
   // --- NEW: WASD Controls ---
   let key = e.key.toLowerCase();
-  if(key === 'w') { moveForward = true; }
-  if(key === 's') { moveBackward = true; }
-  if(key === 'a') { moveLeft = true; }
-  if(key === 'd') { moveRight = true; }
+  if (key === "w") {
+    moveForward = true;
+  }
+  if (key === "s") {
+    moveBackward = true;
+  }
+  if (key === "a") {
+    moveLeft = true;
+  }
+  if (key === "d") {
+    moveRight = true;
+  }
 });
 
-document.addEventListener('keyup', function(e) {
-  if (e.code === "Space") { moveUp = false; }
-  if (e.key === "Control") { moveDown = false; }
+document.addEventListener("keyup", function (e) {
+  if (e.code === "Space") {
+    moveUp = false;
+  }
+  if (e.key === "Control") {
+    moveDown = false;
+  }
 
   let key = e.key.toLowerCase();
-  if(key === 'w') { moveForward = false; }
-  if(key === 's') { moveBackward = false; }
-  if(key === 'a') { moveLeft = false; }
-  if(key === 'd') { moveRight = false; }
+  if (key === "w") {
+    moveForward = false;
+  }
+  if (key === "s") {
+    moveBackward = false;
+  }
+  if (key === "a") {
+    moveLeft = false;
+  }
+  if (key === "d") {
+    moveRight = false;
+  }
 });
-
-
 
 function togglePause() {
   paused = !paused;
   pauseMenu.style.display = paused ? "block" : "none";
-  if (paused) { updatePauseMenuInputs(); }
+  if (paused) {
+    updatePauseMenuInputs();
+  }
 }
 
 function updateAccuracyDisplay() {
@@ -221,14 +261,21 @@ function updateAccuracyDisplay() {
     let headPercent = ((headshotCount / shotsFired) * 100).toFixed(1);
     let bodyPercent = ((bodyshotCount / shotsFired) * 100).toFixed(1);
     let missPercent = ((missCount / shotsFired) * 100).toFixed(1);
-    accuracyDisplay.textContent = 'Accuracy: H: ' + headPercent + '% | B: ' + bodyPercent + '% | M: ' + missPercent + '%';
+    accuracyDisplay.textContent =
+      "Accuracy: H: " +
+      headPercent +
+      "% | B: " +
+      bodyPercent +
+      "% | M: " +
+      missPercent +
+      "%";
   }
 }
 function updateCameraSway(dt) {
   if (document.pointerLockElement === renderer.domElement) {
     cameraSwayTime += dt;
-    const baseAmplitude = settings.swayAmplitude;  // Base amplitude of the sway.
-    const swayFrequency = settings.swayFrequency;    // Frequency for the figure eight.
+    const baseAmplitude = settings.swayAmplitude; // Base amplitude of the sway.
+    const swayFrequency = settings.swayFrequency; // Frequency for the figure eight.
 
     // Slowly vary the overall size (amplitude) over time.
     const amplitudeVariation = 1 + 0.2 * Math.sin(cameraSwayTime * 0.5);
@@ -259,13 +306,12 @@ function updateCameraSway(dt) {
   }
 }
 
-
 // --- Text Sprite Functions (for distance labels) ---
 function createTextSprite(message) {
-  const canvas = document.createElement('canvas');
+  const canvas = document.createElement("canvas");
   canvas.width = 128;
   canvas.height = 64;
-  const context = canvas.getContext('2d');
+  const context = canvas.getContext("2d");
   context.font = "32px Arial Bold";
   context.textAlign = "center";
   context.textBaseline = "middle";
@@ -276,7 +322,11 @@ function createTextSprite(message) {
   context.fillText(message, canvas.width / 2, canvas.height / 2);
   const texture = new THREE.Texture(canvas);
   texture.needsUpdate = true;
-  const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true, sizeAttenuation: false });
+  const spriteMaterial = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+    sizeAttenuation: false,
+  });
   const sprite = new THREE.Sprite(spriteMaterial);
   sprite.scale.set(0.1, 0.05, 1);
   sprite.userData.canvas = canvas;
@@ -311,7 +361,12 @@ function showHitMarker() {
 function init() {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x111111);
-  camera = new THREE.PerspectiveCamera(settings.fov, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera = new THREE.PerspectiveCamera(
+    settings.fov,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    1000,
+  );
   yawObject = new THREE.Object3D();
   pitchObject = new THREE.Object3D();
   yawObject.add(pitchObject);
@@ -322,7 +377,6 @@ function init() {
   renderer = new THREE.WebGLRenderer();
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
-
 
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
   scene.add(ambientLight);
@@ -335,21 +389,26 @@ function init() {
   gridHelper.position.y = 0;
   scene.add(gridHelper);
 
-  renderer.domElement.addEventListener('mousedown', function(e) {
-    if (e.button === 0) { // Check for left mouse button
-      if (document.pointerLockElement !== renderer.domElement) {
-        renderer.domElement.requestPointerLock();
-        return;
+  renderer.domElement.addEventListener(
+    "mousedown",
+    function (e) {
+      if (e.button === 0) {
+        // Check for left mouse button
+        if (document.pointerLockElement !== renderer.domElement) {
+          renderer.domElement.requestPointerLock();
+          return;
+        }
+        shootBullet();
       }
-      shootBullet();
-    }
-  }, false);
+    },
+    false,
+  );
 
-  document.addEventListener('contextmenu', e => e.preventDefault());
-  document.addEventListener('mousedown', onMouseDown, false);
-  document.addEventListener('mouseup', onMouseUp, false);
-  document.addEventListener('mousemove', onMouseMove, false);
-  window.addEventListener('resize', onWindowResize, false);
+  document.addEventListener("contextmenu", (e) => e.preventDefault());
+  document.addEventListener("mousedown", onMouseDown, false);
+  document.addEventListener("mouseup", onMouseUp, false);
+  document.addEventListener("mousemove", onMouseMove, false);
+  window.addEventListener("resize", onWindowResize, false);
 
   animate();
 }
@@ -372,10 +431,17 @@ function updateAimMarkerForTarget(target) {
   const enemyVelocity = target.userData.velocity.clone();
 
   // Calculate intercept time.
-  const interceptTime = calculateInterceptTime(playerPos, targetHeadPos, enemyVelocity, settings.muzzleVelocity);
+  const interceptTime = calculateInterceptTime(
+    playerPos,
+    targetHeadPos,
+    enemyVelocity,
+    settings.muzzleVelocity,
+  );
   if (interceptTime !== null) {
     // Calculate intercept position.
-    const interceptPos = targetHeadPos.clone().add(enemyVelocity.clone().multiplyScalar(interceptTime));
+    const interceptPos = targetHeadPos
+      .clone()
+      .add(enemyVelocity.clone().multiplyScalar(interceptTime));
     target.userData.aimMarker.position.copy(interceptPos);
     target.userData.aimMarker.visible = true;
   } else {
@@ -394,19 +460,26 @@ function createTarget() {
   bodyGeometry.scale(1.5, bodyScaleY, 1.5);
   bodyGeometry.translate(0, 0.15 * bodyScaleY, 0);
 
-  const bodyMaterial = new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff });
+  const bodyMaterial = new THREE.MeshStandardMaterial({
+    color: Math.random() * 0xffffff,
+  });
   const bodyMesh = new THREE.Mesh(bodyGeometry, bodyMaterial);
-  bodyMesh.name = "body";  // So we can reference it for collisions
+  bodyMesh.name = "body"; // So we can reference it for collisions
 
   // --- Head ---
   const headGeometry = new THREE.SphereGeometry(0.13, 32, 32);
-  const headMaterial = new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff });
+  const headMaterial = new THREE.MeshStandardMaterial({
+    color: Math.random() * 0xffffff,
+  });
   const headMesh = new THREE.Mesh(headGeometry, headMaterial);
   headMesh.name = "head";
   headMesh.position.y = 1.5 + 0.15;
 
-  const helperGeometry = new THREE.SphereGeometry(0.15,  15, 15);
-  const helperMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00, wireframe: true });
+  const helperGeometry = new THREE.SphereGeometry(0.15, 15, 15);
+  const helperMaterial = new THREE.MeshBasicMaterial({
+    color: 0xffff00,
+    wireframe: true,
+  });
   const headHelper = new THREE.Mesh(helperGeometry, helperMaterial);
   headHelper.name = "headHelper";
   headMesh.add(headHelper);
@@ -424,14 +497,17 @@ function createTarget() {
   targetGroup.position.set(x, 0, z);
 
   let sprintAngle = Math.random() * Math.PI * 2;
-  targetGroup.userData.velocity = new THREE.Vector3(Math.cos(sprintAngle), 0, Math.sin(sprintAngle))
-                                    .multiplyScalar(settings.targetMaxSpeed);
+  targetGroup.userData.velocity = new THREE.Vector3(
+    Math.cos(sprintAngle),
+    0,
+    Math.sin(sprintAngle),
+  ).multiplyScalar(settings.targetMaxSpeed);
 
   const aimMarker = new THREE.Mesh(
     new THREE.SphereGeometry(0.15, 8, 8),
-    new THREE.MeshBasicMaterial({ color: 0xff0000 })
+    new THREE.MeshBasicMaterial({ color: 0xff0000 }),
   );
-  aimMarker.visible = false;  // Initially hidden
+  aimMarker.visible = false; // Initially hidden
   targetGroup.userData.aimMarker = aimMarker;
   scene.add(aimMarker);
 
@@ -466,7 +542,6 @@ function calculateInterceptTime(P, T, Vt, bulletSpeed) {
   return t > 0 ? t : null;
 }
 
-
 // --- Shooting and Collision Detection ---
 function shootBullet() {
   let now = performance.now();
@@ -492,7 +567,9 @@ function shootBullet() {
   bullet.position.copy(bulletStart);
   bullet.userData.prevPosition = bullet.position.clone();
 
-  bullet.userData.velocity = bulletDirection.multiplyScalar(settings.muzzleVelocity);
+  bullet.userData.velocity = bulletDirection.multiplyScalar(
+    settings.muzzleVelocity,
+  );
   bullets.push(bullet);
   scene.add(bullet);
 
@@ -519,18 +596,20 @@ function lineSphereIntersection(p0, p1, center, radius) {
   let b = 2 * f.dot(d);
   let c = f.dot(f) - radius * radius;
   let discriminant = b * b - 4 * a * c;
-  if (discriminant < 0) { return false; }
+  if (discriminant < 0) {
+    return false;
+  }
   discriminant = Math.sqrt(discriminant);
   let t1 = (-b - discriminant) / (2 * a);
   let t2 = (-b + discriminant) / (2 * a);
-  return ((t1 >= 0 && t1 <= 1) || (t2 >= 0 && t2 <= 1));
+  return (t1 >= 0 && t1 <= 1) || (t2 >= 0 && t2 <= 1);
 }
 function lineCapsuleIntersection(p0, p1, capsuleStart, capsuleEnd, radius) {
   // p0, p1: endpoints of the bullet's line segment
   // capsuleStart, capsuleEnd: endpoints of the capsule (torso hitbox)
   // radius: radius of the capsule
 
-  let d = p1.clone().sub(p0);        // Bullet direction vector.
+  let d = p1.clone().sub(p0); // Bullet direction vector.
   let n = capsuleEnd.clone().sub(capsuleStart); // Capsule central axis.
 
   // m is the vector from the capsule start to the bullet start.
@@ -570,7 +649,9 @@ function lineCapsuleIntersection(p0, p1, capsuleStart, capsuleEnd, radius) {
 
   // Find the closest points on each segment.
   let closestPointLine = p0.clone().add(d.clone().multiplyScalar(t));
-  let closestPointCapsule = capsuleStart.clone().add(n.clone().multiplyScalar(s));
+  let closestPointCapsule = capsuleStart
+    .clone()
+    .add(n.clone().multiplyScalar(s));
 
   // If the distance between these two points is within the radius, there's an intersection.
   let distSquared = closestPointLine.distanceToSquared(closestPointCapsule);
@@ -587,7 +668,9 @@ function onMouseMove(event) {
       let zoomFactor = scopeZoomFactors[settings.scopeType] || 1;
       let currentFov = baseFov / zoomFactor;
 
-      let sensitivityScale = Math.tan(THREE.MathUtils.degToRad(currentFov / 2)) / Math.tan(THREE.MathUtils.degToRad(baseFov / 2));
+      let sensitivityScale =
+        Math.tan(THREE.MathUtils.degToRad(currentFov / 2)) /
+        Math.tan(THREE.MathUtils.degToRad(baseFov / 2));
       sensitivity *= sensitivityScale;
     }
 
@@ -602,7 +685,10 @@ function onMouseDown(event) {
     camera.zoom = zoomValue;
     camera.updateProjectionMatrix();
 
-    if (settings.scopeType === "ironSights" || settings.scopeType === "aperture") {
+    if (
+      settings.scopeType === "ironSights" ||
+      settings.scopeType === "aperture"
+    ) {
       ironSightsImg.src = ironSightsModelMap[settings.ironSightsModel];
       document.getElementById("ironSights").style.display = "block";
       document.getElementById("crosshair").style.display = "none";
@@ -652,21 +738,21 @@ function animate() {
 
   // Calculate right direction from forward vector
   let right = new THREE.Vector3();
-  right.crossVectors(forward, new THREE.Vector3(0,1,0));
+  right.crossVectors(forward, new THREE.Vector3(0, 1, 0));
   right.normalize();
 
   // Move with WASD: WS at 5 m/s, AD at 2.5 m/s
   if (moveForward) {
-      yawObject.position.add(forward.clone().multiplyScalar(5 * dt));
+    yawObject.position.add(forward.clone().multiplyScalar(5 * dt));
   }
   if (moveBackward) {
-      yawObject.position.add(forward.clone().multiplyScalar(-5 * dt));
+    yawObject.position.add(forward.clone().multiplyScalar(-5 * dt));
   }
   if (moveLeft) {
-      yawObject.position.add(right.clone().multiplyScalar(-2.5 * dt));
+    yawObject.position.add(right.clone().multiplyScalar(-2.5 * dt));
   }
   if (moveRight) {
-      yawObject.position.add(right.clone().multiplyScalar(2.5 * dt));
+    yawObject.position.add(right.clone().multiplyScalar(2.5 * dt));
   }
 
   if (paused) {
@@ -687,10 +773,12 @@ function animate() {
       head.getWorldPosition(headWorldPos);
 
       // Check for headshot (instant kill)
-      if (lineSphereIntersection(prevPos, bullet.position, headWorldPos, 0.15)) {
+      if (
+        lineSphereIntersection(prevPos, bullet.position, headWorldPos, 0.15)
+      ) {
         headshotCount++;
         score++;
-        document.getElementById('score').textContent = 'Score: ' + score;
+        document.getElementById("score").textContent = "Score: " + score;
         showHitMarker();
         scene.remove(bullet);
         bullets.splice(i, 1);
@@ -705,10 +793,22 @@ function animate() {
         if (body) {
           let bodyWorldPos = new THREE.Vector3();
           body.getWorldPosition(bodyWorldPos);
-          let capsuleStart = target.position.clone().add(new THREE.Vector3(0, 0.1, 0)); // lower torso
-          let capsuleEnd = target.position.clone().add(new THREE.Vector3(0, 1.33, 0));  // upper torso
-          let capsuleRadius = 0.25;  // Adjust this based on your target's dimensions.
-          if (lineCapsuleIntersection(prevPos, bullet.position, capsuleStart, capsuleEnd, capsuleRadius)) {
+          let capsuleStart = target.position
+            .clone()
+            .add(new THREE.Vector3(0, 0.1, 0)); // lower torso
+          let capsuleEnd = target.position
+            .clone()
+            .add(new THREE.Vector3(0, 1.33, 0)); // upper torso
+          let capsuleRadius = 0.25; // Adjust this based on your target's dimensions.
+          if (
+            lineCapsuleIntersection(
+              prevPos,
+              bullet.position,
+              capsuleStart,
+              capsuleEnd,
+              capsuleRadius,
+            )
+          ) {
             bodyshotCount++;
             target.userData.bodyHits = (target.userData.bodyHits || 0) + 1;
             showHitMarker();
@@ -716,7 +816,7 @@ function animate() {
             bullets.splice(i, 1);
             if (target.userData.bodyHits >= 2) {
               score++;
-              document.getElementById('score').textContent = 'Score: ' + score;
+              document.getElementById("score").textContent = "Score: " + score;
               scene.remove(target);
               scene.remove(target.userData.aimMarker);
               targets.splice(j, 1);
@@ -745,31 +845,47 @@ function animate() {
     let randomAccel = new THREE.Vector3(
       (Math.random() - 0.5) * acceleration * dt,
       0,
-      (Math.random() - 0.5) * acceleration * dt
+      (Math.random() - 0.5) * acceleration * dt,
     );
     v.add(randomAccel);
 
+    // ---- Reworked Strafe (Jiggle) Mechanic ----
+    // In hard mode NPCs jiggle left‑right relative to their forward motion.
+    // The jiggle speed is fixed at 2.5 m/s regardless of the generic strafe settings.
+    // Direction changes occur at random intervals (0.5 s + random [0, 1] s).
     if (settings.hardMode) {
+      const JIGGLE_SPEED = 2.5; // meters per second
       let currentTime = performance.now() / 1000;
-      if (!target.userData.nextStrafeTime || currentTime >= target.userData.nextStrafeTime) {
+      // Determine if it's time to pick a new lateral direction.
+      if (
+        !target.userData.nextStrafeTime ||
+        currentTime >= target.userData.nextStrafeTime
+      ) {
+        // Compute a vector perpendicular to the current forward velocity.
+        // If the forward velocity is zero we default to the world X axis.
         let perpendicular = new THREE.Vector3(-v.z, 0, v.x);
-        if (perpendicular.length() === 0) {
+        if (perpendicular.lengthSq() === 0) {
           perpendicular.set(1, 0, 0);
         }
         perpendicular.normalize();
+        // Randomly choose left or right.
         if (Math.random() < 0.5) {
           perpendicular.negate();
         }
         target.userData.strafeDirection = perpendicular;
-        target.userData.nextStrafeTime = currentTime + (0.5 + Math.random());
+        // Schedule next direction change (0.5 s + random up to 1 s).
+        target.userData.nextStrafeTime =
+          currentTime + (0.1 + Math.random() * 0.5);
       }
-      let randomFactor = 0.5 + Math.random();
-      let strafeAccel = target.userData.strafeDirection.clone()
-                         .multiplyScalar(settings.strafeIntensity * dt * randomFactor);
-      v.add(strafeAccel);
+      // Apply a constant lateral displacement based on the chosen direction.
+      const jiggleDelta = target.userData.strafeDirection
+        .clone()
+        .multiplyScalar(JIGGLE_SPEED * dt);
+      v.add(jiggleDelta);
     }
 
-    if (v.length() > settings.targetMaxSpeed) v.setLength(settings.targetMaxSpeed);
+    if (v.length() > settings.targetMaxSpeed)
+      v.setLength(settings.targetMaxSpeed);
     if (target.position.length() > settings.maxDistance) {
       let inward = target.position.clone().negate().normalize();
       const steerAccel = TARGET_STEER_ACCEL;
@@ -796,11 +912,11 @@ function animate() {
 
   maintainTargets();
   if (settings.showAimMarker) {
-    targets.forEach(target => {
+    targets.forEach((target) => {
       updateAimMarkerForTarget(target);
     });
   } else {
-    targets.forEach(target => {
+    targets.forEach((target) => {
       if (target.userData.aimMarker) {
         target.userData.aimMarker.visible = false;
       }
